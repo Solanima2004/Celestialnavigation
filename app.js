@@ -7,10 +7,24 @@ const observationForm = document.getElementById('observation-form');
 const mainButton = document.getElementById('main-button');
 const resetButton = document.getElementById('reset-button');
 const celestialBodySelect = document.getElementById('celestial-body');
-const starSelectionDiv = document.getElementById('star-selection-div');
-const starListSelect = document.getElementById('star-list');
 const tableBody = document.querySelector("#observation-table tbody");
 
+// --- 度分秒と度数法を変換するヘルパー関数 ---
+function dmsToDec(deg, min, sec) {
+    const sign = deg < 0 ? -1 : 1;
+    return (deg || 0) + sign * ((min || 0) / 60) + sign * ((sec || 0) / 3600);
+}
+
+function decToDms(decimal) {
+    if(typeof decimal !== 'number' || isNaN(decimal)) return { deg: '', min: '', sec: '' };
+    const sign = decimal < 0 ? -1 : 1;
+    decimal = Math.abs(decimal);
+    const deg = Math.trunc(decimal);
+    const minDecimal = (decimal - deg) * 60;
+    const min = Math.trunc(minDecimal);
+    const sec = (minDecimal - min) * 60;
+    return { deg: deg * sign, min: min, sec: parseFloat(sec.toFixed(1)) };
+}
 
 // === メインの再描画・再計算関数 ===
 function rerenderAll() {
@@ -19,7 +33,7 @@ function rerenderAll() {
 
     if (observationStore.length > 0) {
         const lastObs = observationStore[observationStore.length - 1];
-        if (lastObs && lastObs.apLat && lastObs.apLon) {
+        if (lastObs && typeof lastObs.apLat !== 'undefined' && typeof lastObs.apLon !== 'undefined') {
              updatePositionMarker(lastObs.apLat, lastObs.apLon);
         }
     }
@@ -31,16 +45,16 @@ function rerenderAll() {
 
         switch (obsData.body) {
             case 'sun':
-                declinationDeg = obsData.sunDecH + obsData.sunD * ((m + 0.5) / 60);
+                declinationDeg = obsData.sunDecH + (obsData.sunD / 60) * ((m + 0.5) / 60);
                 ghaDeg = obsData.sunGhaH + 15 * ((60 * m + s) / 3600);
                 break;
             case 'moon':
-                declinationDeg = obsData.moonDecH + obsData.moonD * ((m + 0.5) / 60);
-                ghaDeg = obsData.moonGhaH + (14 + 19 / 60) * ((60 * m + s) / 3600) + obsData.moonV * ((m + 0.5) / 60);
+                declinationDeg = obsData.moonDecH + (obsData.moonD / 60) * ((m + 0.5) / 60);
+                ghaDeg = obsData.moonGhaH + (14 + 19 / 60) * ((60 * m + s) / 3600) + (obsData.moonV / 60) * ((m + 0.5) / 60);
                 break;
             case 'planet':
-                declinationDeg = obsData.planetDecH + Math.sign(obsData.planetDecH1 - obsData.planetDecH) * obsData.planetD * ((m + 0.5) / 60);
-                ghaDeg = obsData.planetGhaH + 15 * ((60 * m + s) / 3600) + obsData.planetV * ((m + 0.5) / 60);
+                declinationDeg = obsData.planetDecH + Math.sign(obsData.planetDecH1 - obsData.planetDecH) * (obsData.planetD / 60) * ((m + 0.5) / 60);
+                ghaDeg = obsData.planetGhaH + 15 * ((60 * m + s) / 3600) + (obsData.planetV / 60) * ((m + 0.5) / 60);
                 break;
             case 'star':
                 declinationDeg = obsData.starDec;
@@ -52,16 +66,18 @@ function rerenderAll() {
         const latRad = toRad(obsData.apLat);
         const lhaDeg = ghaDeg + obsData.apLon;
         const lhaRad = toRad(lhaDeg);
+
         const sinHc = Math.sin(latRad) * Math.sin(declinationRad) + Math.cos(latRad) * Math.cos(declinationRad) * Math.cos(lhaRad);
         const hcRad = Math.asin(sinHc);
         const hcDeg = toDeg(hcRad);
 
-        const hsTotalDeg = (obsData.hsDeg || 0) + (obsData.hsMin || 0) / 60;
-        const ieTotalDeg = (obsData.ieSign || 1) * ((obsData.ieDeg || 0) + (obsData.ieMin || 0) / 60);
+        const hsTotalDeg = obsData.hsDeg + (obsData.hsMin / 60);
+        const ieTotalDeg = obsData.ieSign * (obsData.ieDeg + (obsData.ieMin / 60));
         const dipDeg = (1.776 * Math.sqrt(obsData.he)) / 60;
         const refractionDeg = (obsData.r || 0) / 60;
         const parallaxDeg = (obsData.pa || 0) / 60;
         const hoDeg = hsTotalDeg + ieTotalDeg - dipDeg - refractionDeg + parallaxDeg;
+        
         const interceptNm = (hoDeg - hcDeg) * 60;
 
         let azimuthDeg = 0;
@@ -77,12 +93,10 @@ function rerenderAll() {
             azimuthDeg = 360 - azimuthDeg;
         }
 
-        const hoDegreesInt = Math.floor(hoDeg);
-        const hoMinutes = (hoDeg - hoDegreesInt) * 60;
-        const formattedHo = `${hoDegreesInt}° ${hoMinutes.toFixed(1)}′`;
-        
+        const hoDms = decToDms(hoDeg);
+        const formattedHo = `${hoDms.deg}° ${hoDms.min}′`;
+
         const row = tableBody.insertRow();
-        const fullSecond = String(obsData.s).padStart(2, '0');
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>${obsData.datetime.replace('T', ' ')}</td>
@@ -111,74 +125,92 @@ function rerenderAll() {
     }
 }
 
+function getField(id) { return parseFloat(document.getElementById(id).value); }
+
 function getFormData() {
     const datetimeValue = document.getElementById('obs-datetime').value;
     const date = new Date(datetimeValue + 'Z');
 
     return {
         datetime: datetimeValue,
-        s: date.getUTCSeconds(),
-        m: date.getUTCMinutes(),
-        apLat: parseFloat(document.getElementById('latitude').value),
-        apLon: parseFloat(document.getElementById('longitude').value),
+        s: date.getUTCSeconds(), m: date.getUTCMinutes(),
+        apLat: dmsToDec(getField('lat-deg'), getField('lat-min'), getField('lat-sec')),
+        apLon: dmsToDec(getField('lon-deg'), getField('lon-min'), getField('lon-sec')),
         body: celestialBodySelect.value,
         bodyName: celestialBodySelect.options[celestialBodySelect.selectedIndex].text,
-        hsDeg: parseFloat(document.getElementById('altitude-deg').value),
-        hsMin: parseFloat(document.getElementById('altitude-min').value),
-        ieSign: parseFloat(document.getElementById('ie-sign').value),
-        ieDeg: parseFloat(document.getElementById('ie-deg').value),
-        ieMin: parseFloat(document.getElementById('ie-min').value),
-        he: parseFloat(document.getElementById('eye-height').value),
-        r: parseFloat(document.getElementById('refraction').value),
-        pa: parseFloat(document.getElementById('parallax').value),
-        sunGhaH: parseFloat(document.getElementById('sun-gha-h').value),
-        sunDecH: parseFloat(document.getElementById('sun-dec-h').value),
-        sunD: parseFloat(document.getElementById('sun-d').value),
-        moonGhaH: parseFloat(document.getElementById('moon-gha-h').value),
-        moonV: parseFloat(document.getElementById('moon-v').value),
-        moonDecH: parseFloat(document.getElementById('moon-dec-h').value),
-        moonD: parseFloat(document.getElementById('moon-d').value),
-        planetGhaH: parseFloat(document.getElementById('planet-gha-h').value),
-        planetV: parseFloat(document.getElementById('planet-v').value),
-        planetDecH: parseFloat(document.getElementById('planet-dec-h').value),
-        planetDecH1: parseFloat(document.getElementById('planet-dec-h1').value),
-        planetD: parseFloat(document.getElementById('planet-d').value),
-        starGhaAriesH: parseFloat(document.getElementById('star-gha-aries-h').value),
-        starSha: parseFloat(document.getElementById('star-sha').value),
-        starDec: parseFloat(document.getElementById('star-dec').value),
+        hsDeg: getField('altitude-deg'), hsMin: getField('altitude-min'),
+        ieSign: getField('ie-sign'), ieDeg: getField('ie-deg'), ieMin: getField('ie-min'),
+        he: getField('eye-height'), r: getField('refraction'), pa: getField('parallax'),
+        sunGhaH: dmsToDec(getField('sun-gha-h-deg'), getField('sun-gha-h-min'), getField('sun-gha-h-sec')),
+        sunDecH: dmsToDec(getField('sun-dec-h-deg'), getField('sun-dec-h-min'), getField('sun-dec-h-sec')),
+        sunD: dmsToDec(0, getField('sun-d-min'), getField('sun-d-sec')),
+        moonGhaH: dmsToDec(getField('moon-gha-h-deg'), getField('moon-gha-h-min'), getField('moon-gha-h-sec')),
+        moonV: dmsToDec(0, getField('moon-v-min'), getField('moon-v-sec')),
+        moonDecH: dmsToDec(getField('moon-dec-h-deg'), getField('moon-dec-h-min'), getField('moon-dec-h-sec')),
+        moonD: dmsToDec(0, getField('moon-d-min'), getField('moon-d-sec')),
+        planetGhaH: dmsToDec(getField('planet-gha-h-deg'), getField('planet-gha-h-min'), getField('planet-gha-h-sec')),
+        planetV: dmsToDec(0, getField('planet-v-min'), getField('planet-v-sec')),
+        planetDecH: dmsToDec(getField('planet-dec-h-deg'), getField('planet-dec-h-min'), getField('planet-dec-h-sec')),
+        planetDecH1: dmsToDec(getField('planet-dec-h1-deg'), getField('planet-dec-h1-min'), getField('planet-dec-h1-sec')),
+        planetD: dmsToDec(0, getField('planet-d-min'), getField('planet-d-sec')),
+        starGhaAriesH: dmsToDec(getField('star-gha-aries-h-deg'), getField('star-gha-aries-h-min'), getField('star-gha-aries-h-sec')),
+        starSha: dmsToDec(getField('star-sha-deg'), getField('star-sha-min'), getField('star-sha-sec')),
+        starDec: dmsToDec(getField('star-dec-deg'), getField('star-dec-min'), getField('star-dec-sec')),
     };
 }
 
+function setField(id, value) { document.getElementById(id).value = value || ''; }
+function setDmsFields(baseId, decimal) {
+    const dms = decToDms(decimal);
+    setField(`${baseId}-deg`, dms.deg);
+    setField(`${baseId}-min`, dms.min);
+    setField(`${baseId}-sec`, dms.sec);
+}
+
 function populateForm(data) {
-    document.getElementById('obs-datetime').value = data.datetime;
-    document.getElementById('latitude').value = data.apLat;
-    document.getElementById('longitude').value = data.apLon;
-    document.getElementById('celestial-body').value = data.body;
+    setField('obs-datetime', data.datetime);
+    setDmsFields('lat', data.apLat);
+    setDmsFields('lon', data.apLon);
+    setField('celestial-body', data.body);
     celestialBodySelect.dispatchEvent(new Event('change'));
     
-    document.getElementById('altitude-deg').value = data.hsDeg;
-    document.getElementById('altitude-min').value = data.hsMin;
-    document.getElementById('ie-sign').value = data.ieSign;
-    document.getElementById('ie-deg').value = data.ieDeg;
-    document.getElementById('ie-min').value = data.ieMin;
-    document.getElementById('eye-height').value = data.he;
-    document.getElementById('refraction').value = data.r;
-    document.getElementById('parallax').value = data.pa;
-    document.getElementById('sun-gha-h').value = data.sunGhaH;
-    document.getElementById('sun-dec-h').value = data.sunDecH;
-    document.getElementById('sun-d').value = data.sunD;
-    document.getElementById('moon-gha-h').value = data.moonGhaH;
-    document.getElementById('moon-v').value = data.moonV;
-    document.getElementById('moon-dec-h').value = data.moonDecH;
-    document.getElementById('moon-d').value = data.moonD;
-    document.getElementById('planet-gha-h').value = data.planetGhaH;
-    document.getElementById('planet-v').value = data.planetV;
-    document.getElementById('planet-dec-h').value = data.planetDecH;
-    document.getElementById('planet-dec-h1').value = data.planetDecH1;
-    document.getElementById('planet-d').value = data.planetD;
-    document.getElementById('star-gha-aries-h').value = data.starGhaAriesH;
-    document.getElementById('star-sha').value = data.starSha;
-    document.getElementById('star-dec').value = data.starDec;
+    setField('altitude-deg', data.hsDeg);
+    setField('altitude-min', data.hsMin);
+    setField('ie-sign', data.ieSign);
+    setField('ie-deg', data.ieDeg);
+    setField('ie-min', data.ieMin);
+    setField('eye-height', data.he);
+    setField('refraction', data.r);
+    setField('parallax', data.pa);
+
+    setDmsFields('sun-gha-h', data.sunGhaH);
+    setDmsFields('sun-dec-h', data.sunDecH);
+    let dms = decToDms(data.sunD);
+    setField('sun-d-min', dms.min);
+    setField('sun-d-sec', dms.sec);
+    
+    setDmsFields('moon-gha-h', data.moonGhaH);
+    dms = decToDms(data.moonV);
+    setField('moon-v-min', dms.min);
+    setField('moon-v-sec', dms.sec);
+    setDmsFields('moon-dec-h', data.moonDecH);
+    dms = decToDms(data.moonD);
+    setField('moon-d-min', dms.min);
+    setField('moon-d-sec', dms.sec);
+    
+    setDmsFields('planet-gha-h', data.planetGhaH);
+    dms = decToDms(data.planetV);
+    setField('planet-v-min', dms.min);
+    setField('planet-v-sec', dms.sec);
+    setDmsFields('planet-dec-h', data.planetDecH);
+    setDmsFields('planet-dec-h1', data.planetDecH1);
+    dms = decToDms(data.planetD);
+    setField('planet-d-min', dms.min);
+    setField('planet-d-sec', dms.sec);
+
+    setDmsFields('star-gha-aries-h', data.starGhaAriesH);
+    setDmsFields('star-sha', data.starSha);
+    setDmsFields('star-dec', data.starDec);
 }
 
 function editObservation(index) {
@@ -199,7 +231,6 @@ function deleteObservation(index) {
 celestialBodySelect.addEventListener('change', (event) => {
     document.querySelectorAll('.celestial-form').forEach(form => form.style.display = 'none');
     document.getElementById(event.target.value + '-form').style.display = 'block';
-    starSelectionDiv.style.display = event.target.value === 'star' ? 'block' : 'none';
 });
 
 observationForm.addEventListener('submit', (event) => {
