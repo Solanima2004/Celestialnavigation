@@ -1,0 +1,49 @@
+body {
+  font-family: sans-serif;
+  background-color: #f4f4f4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+.altitude-input {
+  width: 80px;
+}
+.hide-by-default {
+  display: none;
+}
+#map {
+  width: 100%;
+  max-width: 800px;
+}
+form {
+  width: 100%;
+  max-width: 800px;
+}
+#results-area {
+  width: 100%;
+  max-width: 800px;
+}
+#observation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+#observation-table th, #observation-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+#observation-table th {
+  background-color: #f2f2f2;
+}
+#observation-table button {
+  padding: 3px 8px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+.fix-marker {
+  color: gold;
+  font-size: 24px;
+  text-shadow: 0 0 3px black;
+}

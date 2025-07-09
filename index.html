@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>天測計算アプリ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>天測計算</h1>
+  <div id="map" style="height: 400px; margin-bottom: 20px; border-radius: 8px;"></div>
+  
+  <form id="observation-form">
+    <fieldset>
+      <legend>観測情報の入力</legend>
+      <div>
+        <label for="obs-datetime">観測時刻 (UTC):</label>
+        <input type="datetime-local" id="obs-datetime" step="1" required>
+      </div>
+      <br>
+      <div>
+        <label>推定位置 (AP):</label>
+        <input type="number" id="latitude" placeholder="緯度" step="any" required>
+        <input type="number" id="longitude" placeholder="経度" step="any" required>
+      </div>
+      <br>
+      <div>
+        <label for="celestial-body">観測天体:</label>
+        <select id="celestial-body">
+          <option value="sun" selected>太陽 (Sun)</option>
+          <option value="moon">月 (Moon)</option>
+          <option value="planet">惑星 (Planet)</option>
+          <option value="star">恒星 (Star)</option>
+        </select>
+      </div>
+       </fieldset>
+
+    <div id="celestial-data-forms">
+      <fieldset id="sun-form" class="celestial-form">
+        <legend>太陽のデータ (天測暦より)</legend>
+        <label>h時のGHA:</label> <input type="number" id="sun-gha-h" step="any"><br>
+        <label>h時の赤緯:</label> <input type="number" id="sun-dec-h" step="any"><br>
+        <label>d (赤緯変化量):</label> <input type="number" id="sun-d" step="any">
+      </fieldset>
+      <fieldset id="moon-form" class="celestial-form" style="display: none;">
+        <legend>月のデータ (天測暦より)</legend>
+        <label>h時のGHA:</label> <input type="number" id="moon-gha-h" step="any"><br>
+        <label>v (GHA変化量):</label> <input type="number" id="moon-v" step="any"><br>
+        <label>h時の赤緯:</label> <input type="number" id="moon-dec-h" step="any"><br>
+        <label>d (赤緯変化量):</label> <input type="number" id="moon-d" step="any">
+      </fieldset>
+      <fieldset id="planet-form" class="celestial-form" style="display: none;">
+        <legend>惑星のデータ (天測暦より)</legend>
+        <label>h時のGHA:</label> <input type="number" id="planet-gha-h" step="any"><br>
+        <label>v (GHA変化量):</label> <input type="number" id="planet-v" step="any"><br>
+        <label>h時の赤緯:</label> <input type="number" id="planet-dec-h" step="any"><br>
+        <label>(h+1)時の赤緯:</label> <input type="number" id="planet-dec-h1" step="any"><br>
+        <label>d (赤緯変化量):</label> <input type="number" id="planet-d" step="any">
+      </fieldset>
+      <fieldset id="star-form" class="celestial-form" style="display: none;">
+        <legend>恒星のデータ (天測暦より)</legend>
+        <label>h時のAriesのGHA:</label> <input type="number" id="star-gha-aries-h" step="any"><br>
+        <label>恒星のSHA:</label> <input type="number" id="star-sha" step="any"><br>
+        <label>恒星の赤緯:</label> <input type="number" id="star-dec" step="any">
+      </fieldset>
+    </div>
+
+    <fieldset style="margin-top: 20px;">
+      <legend>高度補正の入力</legend>
+      <div>
+        <label>観測高度 (Hs):</label>
+        <input type="number" id="altitude-deg" placeholder="度" class="altitude-input" required>
+        <span>度</span>
+        <input type="number" id="altitude-min" placeholder="分" class="altitude-input" step="any" required>
+        <span>分</span>
+      </div>
+      <br>
+      <div>
+        <label>器差 (IE):</label>
+        <select id="ie-sign">
+          <option value="1">+</option>
+          <option value="-1">-</option>
+        </select>
+        <input type="number" id="ie-deg" value="0" class="altitude-input" required>
+        <span>度</span>
+        <input type="number" id="ie-min" value="0" class="altitude-input" step="any" required>
+        <span>分</span>
+      </div>
+      <br>
+      <div>
+        <label for="eye-height">眼高 (HE):</label>
+        <input type="number" id="eye-height" value="10" step="any" required>
+        <span>メートル</span>
+      </div>
+      <br>
+      <div>
+        <label for="refraction">大気差 (R):</label>
+        <input type="number" id="refraction" value="0.9" step="any" required>
+        <span>分</span>
+      </div>
+      <br>
+      <div>
+        <label for="parallax">視差 (PA):</label>
+        <input type="number" id="parallax" value="0.1" step="any" required>
+        <span>分</span>
+      </div>
+    </fieldset>
+    
+    <div style="margin-top:20px;">
+      <button type="submit" id="main-button">観測データを追加</button>
+      <button type="button" id="reset-button">リセット</button>
+    </div>
+  </form>
+
+  <div id="results-area" style="margin-top: 20px;">
+    <h2>観測データ一覧</h2>
+    <table id="observation-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>観測時刻 (UTC)</th>
+          <th>天体</th>
+          <th>真高度 (Ho)</th>
+          <th>方位角 (Zn)</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
