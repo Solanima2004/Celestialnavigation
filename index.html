@@ -61,6 +61,7 @@
           </div>
           <label>d (赤緯変化量):</label>
           <div class="ms-container">
+            <select id="sun-d-sign" class="sign-select"><option value="1">+</option><option value="-1">-</option></select>
             <input type="number" id="sun-d-min" placeholder="分" class="dms-input">′ 
             <input type="number" id="sun-d-sec" step="any" placeholder="秒" class="dms-input">″
           </div>
@@ -78,6 +79,7 @@
           </div>
           <label>v (GHA変化量):</label>
           <div class="ms-container">
+            <select id="moon-v-sign" class="sign-select"><option value="1">+</option><option value="-1">-</option></select>
             <input type="number" id="moon-v-min" placeholder="分" class="dms-input">′ 
             <input type="number" id="moon-v-sec" step="any" placeholder="秒" class="dms-input">″
           </div>
@@ -89,6 +91,7 @@
           </div>
           <label>d (赤緯変化量):</label>
           <div class="ms-container">
+            <select id="moon-d-sign" class="sign-select"><option value="1">+</option><option value="-1">-</option></select>
             <input type="number" id="moon-d-min" placeholder="分" class="dms-input">′ 
             <input type="number" id="moon-d-sec" step="any" placeholder="秒" class="dms-input">″
           </div>
@@ -106,6 +109,7 @@
           </div>
           <label>v (GHA変化量):</label>
           <div class="ms-container">
+            <select id="planet-v-sign" class="sign-select"><option value="1">+</option><option value="-1">-</option></select>
             <input type="number" id="planet-v-min" placeholder="分" class="dms-input">′ 
             <input type="number" id="planet-v-sec" step="any" placeholder="秒" class="dms-input">″
           </div>
@@ -123,6 +127,7 @@
           </div>
           <label>d (赤緯変化量):</label>
           <div class="ms-container">
+            <select id="planet-d-sign" class="sign-select"><option value="1">+</option><option value="-1">-</option></select>
             <input type="number" id="planet-d-min" placeholder="分" class="dms-input">′ 
             <input type="number" id="planet-d-sec" step="any" placeholder="秒" class="dms-input">″
           </div>
@@ -204,6 +209,7 @@
           <th>#</th>
           <th>観測時刻 (UTC)</th>
           <th>天体</th>
+          <th>計算高度 (Hc)</th>
           <th>真高度 (Ho)</th>
           <th>方位角 (Zn)</th>
           <th>操作</th>

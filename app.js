@@ -93,6 +93,9 @@ function rerenderAll() {
             azimuthDeg = 360 - azimuthDeg;
         }
 
+        const hcDms = decToDms(hcDeg);
+        const formattedHc = `${hcDms.deg}° ${hcDms.min}′`;
+
         const hoDms = decToDms(hoDeg);
         const formattedHo = `${hoDms.deg}° ${hoDms.min}′`;
 
@@ -101,6 +104,7 @@ function rerenderAll() {
             <td>${index + 1}</td>
             <td>${obsData.datetime.replace('T', ' ')}</td>
             <td>${obsData.bodyName}</td>
+            <td>${formattedHc}</td>
             <td>${formattedHo}</td>
             <td>${azimuthDeg.toFixed(1)}°</td>
             <td>
@@ -132,27 +136,31 @@ function getFormData() {
     const date = new Date(datetimeValue + 'Z');
 
     return {
+        // 基本情報
         datetime: datetimeValue,
         s: date.getUTCSeconds(), m: date.getUTCMinutes(),
         apLat: dmsToDec(getField('lat-deg'), getField('lat-min'), getField('lat-sec')),
         apLon: dmsToDec(getField('lon-deg'), getField('lon-min'), getField('lon-sec')),
         body: celestialBodySelect.value,
         bodyName: celestialBodySelect.options[celestialBodySelect.selectedIndex].text,
+        // 高度補正
         hsDeg: getField('altitude-deg'), hsMin: getField('altitude-min'),
         ieSign: getField('ie-sign'), ieDeg: getField('ie-deg'), ieMin: getField('ie-min'),
         he: getField('eye-height'), r: getField('refraction'), pa: getField('parallax'),
+        // ★★★ 符号セレクタを考慮して値を取得するよう修正 ★★★
         sunGhaH: dmsToDec(getField('sun-gha-h-deg'), getField('sun-gha-h-min'), getField('sun-gha-h-sec')),
         sunDecH: dmsToDec(getField('sun-dec-h-deg'), getField('sun-dec-h-min'), getField('sun-dec-h-sec')),
-        sunD: dmsToDec(0, getField('sun-d-min'), getField('sun-d-sec')),
+        sunD: getField('sun-d-sign') * dmsToDec(0, getField('sun-d-min'), getField('sun-d-sec')),
         moonGhaH: dmsToDec(getField('moon-gha-h-deg'), getField('moon-gha-h-min'), getField('moon-gha-h-sec')),
-        moonV: dmsToDec(0, getField('moon-v-min'), getField('moon-v-sec')),
+        moonV: getField('moon-v-sign') * dmsToDec(0, getField('moon-v-min'), getField('moon-v-sec')),
         moonDecH: dmsToDec(getField('moon-dec-h-deg'), getField('moon-dec-h-min'), getField('moon-dec-h-sec')),
-        moonD: dmsToDec(0, getField('moon-d-min'), getField('moon-d-sec')),
+        moonD: getField('moon-d-sign') * dmsToDec(0, getField('moon-d-min'), getField('moon-d-sec')),
+        
         planetGhaH: dmsToDec(getField('planet-gha-h-deg'), getField('planet-gha-h-min'), getField('planet-gha-h-sec')),
-        planetV: dmsToDec(0, getField('planet-v-min'), getField('planet-v-sec')),
+        planetV: getField('planet-v-sign') * dmsToDec(0, getField('planet-v-min'), getField('planet-v-sec')),
         planetDecH: dmsToDec(getField('planet-dec-h-deg'), getField('planet-dec-h-min'), getField('planet-dec-h-sec')),
         planetDecH1: dmsToDec(getField('planet-dec-h1-deg'), getField('planet-dec-h1-min'), getField('planet-dec-h1-sec')),
-        planetD: dmsToDec(0, getField('planet-d-min'), getField('planet-d-sec')),
+        planetD: getField('planet-d-sign') * dmsToDec(0, getField('planet-d-min'), getField('planet-d-sec')),
         starGhaAriesH: dmsToDec(getField('star-gha-aries-h-deg'), getField('star-gha-aries-h-min'), getField('star-gha-aries-h-sec')),
         starSha: dmsToDec(getField('star-sha-deg'), getField('star-sha-min'), getField('star-sha-sec')),
         starDec: dmsToDec(getField('star-dec-deg'), getField('star-dec-min'), getField('star-dec-sec')),
@@ -173,7 +181,6 @@ function populateForm(data) {
     setDmsFields('lon', data.apLon);
     setField('celestial-body', data.body);
     celestialBodySelect.dispatchEvent(new Event('change'));
-    
     setField('altitude-deg', data.hsDeg);
     setField('altitude-min', data.hsMin);
     setField('ie-sign', data.ieSign);
@@ -182,32 +189,35 @@ function populateForm(data) {
     setField('eye-height', data.he);
     setField('refraction', data.r);
     setField('parallax', data.pa);
-
+    
+    // ★★★ 符号セレクタと値を設定するよう修正 ★★★
     setDmsFields('sun-gha-h', data.sunGhaH);
     setDmsFields('sun-dec-h', data.sunDecH);
-    let dms = decToDms(data.sunD);
+    setField('sun-d-sign', Math.sign(data.sunD) || 1);
+    let dms = decToDms(Math.abs(data.sunD));
     setField('sun-d-min', dms.min);
     setField('sun-d-sec', dms.sec);
-    
     setDmsFields('moon-gha-h', data.moonGhaH);
-    dms = decToDms(data.moonV);
+    setField('moon-v-sign', Math.sign(data.moonV) || 1);
+    dms = decToDms(Math.abs(data.moonV));
     setField('moon-v-min', dms.min);
     setField('moon-v-sec', dms.sec);
     setDmsFields('moon-dec-h', data.moonDecH);
-    dms = decToDms(data.moonD);
+    setField('moon-d-sign', Math.sign(data.moonD) || 1);
+    dms = decToDms(Math.abs(data.moonD));
     setField('moon-d-min', dms.min);
     setField('moon-d-sec', dms.sec);
-    
     setDmsFields('planet-gha-h', data.planetGhaH);
-    dms = decToDms(data.planetV);
+    setField('planet-v-sign', Math.sign(data.planetV) || 1);
+    dms = decToDms(Math.abs(data.planetV));
     setField('planet-v-min', dms.min);
     setField('planet-v-sec', dms.sec);
     setDmsFields('planet-dec-h', data.planetDecH);
     setDmsFields('planet-dec-h1', data.planetDecH1);
-    dms = decToDms(data.planetD);
+    setField('planet-d-sign', Math.sign(data.planetD) || 1);
+    dms = decToDms(Math.abs(data.planetD));
     setField('planet-d-min', dms.min);
     setField('planet-d-sec', dms.sec);
-
     setDmsFields('star-gha-aries-h', data.starGhaAriesH);
     setDmsFields('star-sha', data.starSha);
     setDmsFields('star-dec', data.starDec);
