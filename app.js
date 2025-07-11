@@ -189,8 +189,10 @@ function populateForm(data) {
     setField('eye-height', data.he);
     setField('refraction', data.r);
     setField('parallax', data.pa);
-    
+    setField('altitude-deg', data.hsDeg);
+    setField('altitude-min', data.hsMin);
     // ★★★ 符号セレクタと値を設定するよう修正 ★★★
+    
     setDmsFields('sun-gha-h', data.sunGhaH);
     setDmsFields('sun-dec-h', data.sunDecH);
     setField('sun-d-sign', Math.sign(data.sunD) || 1);
