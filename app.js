@@ -11,8 +11,11 @@ const tableBody = document.querySelector("#observation-table tbody");
 
 // --- 度分秒と度数法を変換するヘルパー関数 ---
 function dmsToDec(deg, min, sec) {
-    const sign = deg < 0 ? -1 : 1;
-    return (deg || 0) + sign * ((min || 0) / 60) + sign * ((sec || 0) / 3600);
+    const d = deg || 0;
+    const m = min || 0;
+    const s = sec || 0;
+    const sign = d < 0 ? -1 : 1;
+    return d + sign * (m / 60) + sign * (s / 3600);
 }
 
 function decToDms(decimal) {
@@ -43,7 +46,6 @@ function rerenderAll() {
         const s = obsData.s;
         let ghaDeg = 0, declinationDeg = 0;
 
-        // ★★★ 計算式を修正 ★★★
         switch (obsData.body) {
             case 'sun':
                 declinationDeg = obsData.sunDecH + obsData.sunD * ((m + s / 60) / 60);
@@ -136,18 +138,15 @@ function getFormData() {
     const date = new Date(datetimeValue + 'Z');
 
     return {
-        // 基本情報
         datetime: datetimeValue,
         s: date.getUTCSeconds(), m: date.getUTCMinutes(),
         apLat: dmsToDec(getField('lat-deg'), getField('lat-min'), getField('lat-sec')),
         apLon: dmsToDec(getField('lon-deg'), getField('lon-min'), getField('lon-sec')),
         body: celestialBodySelect.value,
         bodyName: celestialBodySelect.options[celestialBodySelect.selectedIndex].text,
-        // 高度補正
         hsDeg: getField('altitude-deg'), hsMin: getField('altitude-min'),
         ieSign: getField('ie-sign'), ieDeg: getField('ie-deg'), ieMin: getField('ie-min'),
         he: getField('eye-height'), r: getField('refraction'), pa: getField('parallax'),
-        // ★★★ 符号セレクタを考慮して値を取得するよう修正 ★★★
         sunGhaH: dmsToDec(getField('sun-gha-h-deg'), getField('sun-gha-h-min'), getField('sun-gha-h-sec')),
         sunDecH: dmsToDec(getField('sun-dec-h-deg'), getField('sun-dec-h-min'), getField('sun-dec-h-sec')),
         sunD: getField('sun-d-sign') * dmsToDec(0, getField('sun-d-min'), getField('sun-d-sec')),
@@ -155,7 +154,6 @@ function getFormData() {
         moonV: getField('moon-v-sign') * dmsToDec(0, getField('moon-v-min'), getField('moon-v-sec')),
         moonDecH: dmsToDec(getField('moon-dec-h-deg'), getField('moon-dec-h-min'), getField('moon-dec-h-sec')),
         moonD: getField('moon-d-sign') * dmsToDec(0, getField('moon-d-min'), getField('moon-d-sec')),
-        
         planetGhaH: dmsToDec(getField('planet-gha-h-deg'), getField('planet-gha-h-min'), getField('planet-gha-h-sec')),
         planetV: getField('planet-v-sign') * dmsToDec(0, getField('planet-v-min'), getField('planet-v-sec')),
         planetDecH: dmsToDec(getField('planet-dec-h-deg'), getField('planet-dec-h-min'), getField('planet-dec-h-sec')),
@@ -167,7 +165,8 @@ function getFormData() {
     };
 }
 
-function setField(id, value) { document.getElementById(id).value = value || ''; }
+function setField(id, value) { document.getElementById(id).value = value === 0 ? 0 : (value || ''); }
+
 function setDmsFields(baseId, decimal) {
     const dms = decToDms(decimal);
     setField(`${baseId}-deg`, dms.deg);
@@ -181,6 +180,7 @@ function populateForm(data) {
     setDmsFields('lon', data.apLon);
     setField('celestial-body', data.body);
     celestialBodySelect.dispatchEvent(new Event('change'));
+    
     setField('altitude-deg', data.hsDeg);
     setField('altitude-min', data.hsMin);
     setField('ie-sign', data.ieSign);
@@ -189,16 +189,14 @@ function populateForm(data) {
     setField('eye-height', data.he);
     setField('refraction', data.r);
     setField('parallax', data.pa);
-    setField('altitude-deg', data.hsDeg);
-    setField('altitude-min', data.hsMin);
-    // ★★★ 符号セレクタと値を設定するよう修正 ★★★
-    
+
     setDmsFields('sun-gha-h', data.sunGhaH);
     setDmsFields('sun-dec-h', data.sunDecH);
     setField('sun-d-sign', Math.sign(data.sunD) || 1);
     let dms = decToDms(Math.abs(data.sunD));
     setField('sun-d-min', dms.min);
     setField('sun-d-sec', dms.sec);
+    
     setDmsFields('moon-gha-h', data.moonGhaH);
     setField('moon-v-sign', Math.sign(data.moonV) || 1);
     dms = decToDms(Math.abs(data.moonV));
@@ -209,6 +207,7 @@ function populateForm(data) {
     dms = decToDms(Math.abs(data.moonD));
     setField('moon-d-min', dms.min);
     setField('moon-d-sec', dms.sec);
+    
     setDmsFields('planet-gha-h', data.planetGhaH);
     setField('planet-v-sign', Math.sign(data.planetV) || 1);
     dms = decToDms(Math.abs(data.planetV));
@@ -220,6 +219,7 @@ function populateForm(data) {
     dms = decToDms(Math.abs(data.planetD));
     setField('planet-d-min', dms.min);
     setField('planet-d-sec', dms.sec);
+
     setDmsFields('star-gha-aries-h', data.starGhaAriesH);
     setDmsFields('star-sha', data.starSha);
     setDmsFields('star-dec', data.starDec);
