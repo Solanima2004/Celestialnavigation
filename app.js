@@ -43,18 +43,19 @@ function rerenderAll() {
         const s = obsData.s;
         let ghaDeg = 0, declinationDeg = 0;
 
+        // ★★★ 計算式を修正 ★★★
         switch (obsData.body) {
             case 'sun':
-                declinationDeg = obsData.sunDecH + (obsData.sunD / 60) * ((m + 0.5) / 60);
+                declinationDeg = obsData.sunDecH + obsData.sunD * ((m + s / 60) / 60);
                 ghaDeg = obsData.sunGhaH + 15 * ((60 * m + s) / 3600);
                 break;
             case 'moon':
-                declinationDeg = obsData.moonDecH + (obsData.moonD / 60) * ((m + 0.5) / 60);
-                ghaDeg = obsData.moonGhaH + (14 + 19 / 60) * ((60 * m + s) / 3600) + (obsData.moonV / 60) * ((m + 0.5) / 60);
+                declinationDeg = obsData.moonDecH + obsData.moonD * ((m + s / 60) / 60);
+                ghaDeg = obsData.moonGhaH + (14 + 19 / 60) * ((60 * m + s) / 3600) + obsData.moonV * ((m + s / 60) / 60);
                 break;
             case 'planet':
-                declinationDeg = obsData.planetDecH + Math.sign(obsData.planetDecH1 - obsData.planetDecH) * (obsData.planetD / 60) * ((m + 0.5) / 60);
-                ghaDeg = obsData.planetGhaH + 15 * ((60 * m + s) / 3600) + (obsData.planetV / 60) * ((m + 0.5) / 60);
+                declinationDeg = obsData.planetDecH + Math.sign(obsData.planetDecH1 - obsData.planetDecH) * obsData.planetD * ((m + s / 60) / 60);
+                ghaDeg = obsData.planetGhaH + 15 * ((60 * m + s) / 3600) + obsData.planetV * ((m + s / 60) / 60);
                 break;
             case 'star':
                 declinationDeg = obsData.starDec;
@@ -95,7 +96,6 @@ function rerenderAll() {
 
         const hcDms = decToDms(hcDeg);
         const formattedHc = `${hcDms.deg}° ${hcDms.min}′`;
-
         const hoDms = decToDms(hoDeg);
         const formattedHo = `${hoDms.deg}° ${hoDms.min}′`;
 
